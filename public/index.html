@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    try {
+      document.querySelector('meta[name="color-scheme"]').content = localStorage.getItem("color-scheme") ?? "light dark";
+    } catch {}
+  </script>
+  <title>BruTube</title>
+  <meta name="description" content="BruTube — Pemutar video YouTube bergaya Neobrutalism yang bersih, cepat, dan bebas distraksi.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='4' fill='%23ff3b30' stroke='%23111111' stroke-width='3'/%3E%3Cpolygon points='13,11 22,16 13,21' fill='%23ffffff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <button id="menuToggleBtn" class="icon-btn" type="button" aria-label="Buka/Tutup Menu Navigasi" aria-expanded="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <a href="#home" id="brandLogo" class="brand" aria-label="BruTube Beranda">
+        <span class="brand-icon" aria-hidden="true">
+          <svg width="26" height="20" viewBox="0 0 28 20" fill="none">
+            <rect width="28" height="20" rx="5" fill="#ff2a2a"/>
+            <polygon points="11,6 19,10 11,14" fill="#ffffff"/>
+          </svg>
+        </span>
+        <span class="brand-name">BruTube</span>
+      </a>
+    </div>
+
+    <div class="topbar-center">
+      <form id="searchForm" class="search-form" role="search">
+        <div class="search-input-wrap">
+          <input
+            id="searchInput"
+            type="search"
+            class="search-input"
+            placeholder="Cari video, channel, atau tempel URL YouTube / MP4... (tekan /)"
+            autocomplete="off"
+            aria-label="Cari video atau tempel URL"
+          >
+          <button id="clearSearchBtn" class="search-clear-btn" type="button" aria-label="Hapus pencarian" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <button class="search-submit-btn" type="submit" aria-label="Cari">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <div class="topbar-right">
+      <button id="addVideoBtn" class="btn-pill btn-primary-soft" type="button" title="Putar URL YouTube, MP4, atau File Lokal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span class="btn-label">Putar URL / Lokal</span>
+      </button>
+
+      <button id="focusModeTopBtn" class="icon-btn" type="button" aria-label="Toggle Mode Fokus" title="Mode Fokus (Sembunyikan distraksi)" aria-pressed="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+
+      <button id="shortcutsBtn" class="icon-btn" type="button" aria-label="Shortcut Keyboard" title="Shortcut Keyboard (?)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+          <line x1="6" y1="9" x2="6.01" y2="9"></line>
+          <line x1="10" y1="9" x2="10.01" y2="9"></line>
+          <line x1="14" y1="9" x2="14.01" y2="9"></line>
+          <line x1="18" y1="9" x2="18.01" y2="9"></line>
+          <line x1="8" y1="15" x2="16" y2="15"></line>
+        </svg>
+      </button>
+
+      <button id="settingsBtn" class="icon-btn" type="button" aria-label="Pengaturan" title="Pengaturan (Tema, API Key, Mode Fokus)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+
+      <!-- YouTube-style Account Profile Avatar Button & Menu -->
+      <div class="profile-menu-wrap">
+        <button id="accountAvatarBtn" class="account-avatar-btn" type="button" aria-label="Menu Akun Profil" aria-haspopup="menu" aria-expanded="false">
+          <span id="accountAvatarContent">U</span>
+        </button>
+
+        <div id="accountDropdown" class="account-dropdown" role="menu" hidden>
+          <div class="account-dropdown-header">
+            <div id="dropdownAvatar" class="account-dropdown-avatar">U</div>
+            <div class="account-dropdown-meta">
+              <div id="dropdownName" class="account-dropdown-name">Pengguna BruTube</div>
+              <div id="dropdownHandle" class="account-dropdown-handle">@brutube_user</div>
+              <button id="openEditProfileBtn" class="account-edit-link" type="button">Edit profil akun</button>
+            </div>
+          </div>
+          <hr class="sidebar-divider">
+          <div class="account-dropdown-group">
+            <button class="account-menu-item" type="button" data-account-nav="history">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+              <span>Riwayat Tonton</span>
+            </button>
+            <button class="account-menu-item" type="button" data-account-nav="watchlater">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              <span>Tonton Nanti</span>
+            </button>
+            <button class="account-menu-item" type="button" data-account-nav="liked">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+              <span>Video Disukai</span>
+            </button>
+            <button class="account-menu-item" type="button" data-account-nav="playlists">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="15" y2="18"/></svg>
+              <span>Playlist Anda</span>
+            </button>
+          </div>
+          <hr class="sidebar-divider">
+          <div class="account-dropdown-group">
+            <button id="menuThemeBtn" class="account-menu-item" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <span id="menuThemeLabel">Tampilan: Sistem</span>
+            </button>
+            <button id="menuFocusBtn" class="account-menu-item" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+              <span id="menuFocusLabel">Mode Fokus: Nonaktif</span>
+            </button>
+            <button id="menuSettingsBtn" class="account-menu-item" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Pengaturan</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- App Shell -->
+  <div class="app-shell">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar scroller" aria-label="Menu Utama">
+      <nav class="sidebar-section">
+        <button class="nav-item active" data-view="home" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg>
+          <span>Beranda</span>
+        </button>
+        <button class="nav-item" data-view="trending" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c.5 4-2.5 6-2.5 9.5a3.5 3.5 0 0 0 7 0c0-2-1-3.5-1-5.5 2.5 1.5 4.5 4.5 4.5 8a8 8 0 1 1-16 0c0-5 4-9 8-12z"/></svg>
+          <span>Populer</span>
+        </button>
+        <button class="nav-item" data-view="subscriptions" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><line x1="6" y1="5" x2="18" y2="5"/><line x1="9" y1="2" x2="15" y2="2"/><polygon points="10,11.5 15,14 10,16.5" fill="currentColor" stroke="none"/></svg>
+          <span>Subscription</span>
+        </button>
+      </nav>
+
+      <hr class="sidebar-divider">
+
+      <nav class="sidebar-section">
+        <div class="sidebar-heading">Koleksi Anda</div>
+        <button class="nav-item" data-view="history" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+          <span>Riwayat Tonton</span>
+        </button>
+        <button class="nav-item" data-view="watchlater" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span>Tonton Nanti</span>
+          <span id="watchLaterCount" class="nav-badge" hidden>0</span>
+        </button>
+        <button class="nav-item" data-view="liked" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+          <span>Video Disukai</span>
+          <span id="likedCount" class="nav-badge" hidden>0</span>
+        </button>
+        <button class="nav-item" data-view="playlists" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="15" y2="18"/><polygon points="18,15 22,18 18,21" fill="currentColor" stroke="none"/><line x1="3" y1="6" x2="4" y2="6"/><line x1="3" y1="12" x2="4" y2="12"/><line x1="3" y1="18" x2="4" y2="18"/></svg>
+          <span>Playlist</span>
+        </button>
+      </nav>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Channel Diikuti</div>
+        <div id="subscribedChannelsList" class="subscribed-list">
+          <p class="sidebar-empty">Belum ada channel diikuti</p>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <p>BruTube — 100% UI Bebas Iklan & Tracker.</p>
+        <p class="sidebar-footer-sub">Mendukung YouTube Live, MP4/WebM, & File Lokal.</p>
+      </div>
+    </aside>
+
+    <!-- Backdrop for mobile drawer -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+    <!-- Main Workspace -->
+    <main id="mainContent" class="main-content scroller" tabindex="-1">
+      <!-- FEED VIEW -->
+      <section id="feedView" class="feed-view">
+        <!-- Category Pills -->
+        <div id="categoryBar" class="category-bar scroller" role="tablist" aria-label="Kategori Video">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Section Header (for History, Liked, Search Results, Playlists, etc.) -->
+        <div id="feedHeader" class="feed-header" hidden>
+          <div>
+            <h1 id="feedTitle" class="feed-title"></h1>
+            <p id="feedSubtitle" class="feed-subtitle"></p>
+          </div>
+          <div id="feedActions" class="feed-actions"></div>
+        </div>
+
+        <!-- Video Grid -->
+        <div id="videoGrid" class="video-grid" aria-live="polite"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" hidden>
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <polygon points="10,9 16,12 10,15" fill="currentColor" stroke="none"></polygon>
+            </svg>
+          </div>
+          <h2 id="emptyStateTitle">Tidak ada video ditemukan</h2>
+          <p id="emptyStateDesc">Coba kata kunci lain atau buka video dari URL / file lokal.</p>
+          <button id="emptyActionBtn" class="btn-pill btn-primary" type="button">Buka URL / File Lokal</button>
+        </div>
+      </section>
+
+      <!-- CHANNEL PROFILE VIEW (YouTube-style Channel Page) -->
+      <section id="channelView" class="channel-view" hidden>
+        <div id="channelBanner" class="channel-banner"></div>
+        <div class="channel-profile-header">
+          <div id="channelProfileAvatar" class="channel-profile-avatar">C</div>
+          <div class="channel-profile-info">
+            <h1 id="channelProfileName" class="channel-profile-name">Nama Channel</h1>
+            <div id="channelProfileMeta" class="channel-profile-meta">@channel • YouTube Channel</div>
+            <div class="channel-profile-actions">
+              <button id="channelSubscribeBtn" class="btn-pill btn-subscribe" type="button">Subscribe</button>
+              <button id="channelBackBtn" class="btn-pill btn-outline" type="button">← Kembali</button>
+            </div>
+          </div>
+        </div>
+        <div class="channel-tabs" role="tablist">
+          <button class="channel-tab active" data-ch-tab="latest" type="button" role="tab" aria-selected="true">Video</button>
+          <button class="channel-tab" data-ch-tab="popular" type="button" role="tab" aria-selected="false">Populer</button>
+        </div>
+        <div id="channelVideoGrid" class="video-grid"></div>
+      </section>
+
+      <!-- WATCH VIEW -->
+      <section id="watchView" class="watch-view" hidden>
+        <div class="watch-layout">
+          <div class="watch-primary">
+            <!-- Player Stage with Ambient Glow -->
+            <div id="playerStage" class="player-stage">
+              <div id="ambientGlow" class="ambient-glow" aria-hidden="true"></div>
+              <div id="playerContainer" class="player-container">
+                <!-- Native HTML5 Player (MP4/WebM/Local) -->
+                <video id="html5Video" class="video-element" playsinline preload="metadata"></video>
+
+                <!-- YouTube Embed with strict-origin-when-cross-origin to prevent Error 153 / Video Unavailable -->
+                <iframe
+                  id="ytIframe"
+                  class="video-iframe"
+                  title="Pemutar Video YouTube"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                  hidden
+                ></iframe>
+
+                <!-- Custom Controls Overlay for HTML5 Video -->
+                <div id="customControls" class="custom-controls">
+                  <div class="progress-wrap" id="progressWrap" role="slider" aria-label="Posisi Video" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+                    <div class="progress-buffered" id="progressBuffered"></div>
+                    <div class="progress-played" id="progressPlayed"></div>
+                    <div class="progress-thumb" id="progressThumb"></div>
+                    <div class="progress-tooltip" id="progressTooltip">0:00</div>
+                  </div>
+
+                  <div class="controls-row">
+                    <div class="controls-left">
+                      <button id="playPauseBtn" class="ctrl-btn" type="button" aria-label="Putar/Jeda (Spasi)">
+                        <svg id="playIcon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,16 6,20"/></svg>
+                      </button>
+                      <button id="skipBackBtn" class="ctrl-btn" type="button" aria-label="Mundur 10 detik (J)" title="Mundur 10 detik (J)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+                      </button>
+                      <button id="skipFwdBtn" class="ctrl-btn" type="button" aria-label="Maju 10 detik (L)" title="Maju 10 detik (L)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+                      </button>
+                      <div class="volume-group">
+                        <button id="muteBtn" class="ctrl-btn" type="button" aria-label="Bisukan (M)" title="Bisukan (M)">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                        </button>
+                        <input id="volumeSlider" class="volume-slider" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+                      </div>
+                      <span id="timeDisplay" class="time-display">0:00 / 0:00</span>
+                    </div>
+
+                    <div class="controls-right">
+                      <select id="speedSelect" class="speed-select" aria-label="Kecepatan Putar" title="Kecepatan Putar">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="1.75">1.75x</option>
+                        <option value="2">2x</option>
+                      </select>
+                      <button id="loopBtn" class="ctrl-btn" type="button" aria-label="Ulangi Video" title="Ulangi Video" aria-pressed="false">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                      </button>
+                      <button id="pipBtn" class="ctrl-btn" type="button" aria-label="Picture-in-Picture" title="Picture-in-Picture (Mini Player)">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="11" y="11" width="9" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+                      </button>
+                      <button id="theaterBtn" class="ctrl-btn" type="button" aria-label="Mode Teater (T)" title="Mode Teater (T)" aria-pressed="false">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+                      </button>
+                      <button id="fullscreenBtn" class="ctrl-btn" type="button" aria-label="Layar Penuh (F)" title="Layar Penuh (F)">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video Metadata & Actions -->
+            <div class="watch-meta">
+              <div class="watch-title-row">
+                <h1 id="watchTitle" class="watch-title">Judul Video</h1>
+                <span id="watchSourceBadge" class="source-badge">HD • Ad-Free</span>
+              </div>
+
+              <div class="watch-bar">
+                <div class="channel-box">
+                  <div id="watchChannelAvatar" class="channel-avatar">C</div>
+                  <div class="channel-info">
+                    <div id="watchChannelName" class="channel-name">Channel Name</div>
+                    <div id="watchChannelSubs" class="channel-subs">120K subscriber</div>
+                  </div>
+                  <button id="subscribeBtn" class="btn-pill btn-subscribe" type="button">Subscribe</button>
+                </div>
+
+                <div class="action-buttons">
+                  <div class="like-group">
+                    <button id="likeBtn" class="action-pill" type="button" aria-pressed="false">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                      <span id="likeCountText">0</span>
+                    </button>
+                    <span class="like-divider"></span>
+                    <button id="dislikeBtn" class="action-pill" type="button" aria-label="Tidak Suka" aria-pressed="false">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+                    </button>
+                  </div>
+
+                  <button id="watchLaterBtn" class="action-pill" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    <span>Tonton Nanti</span>
+                  </button>
+
+                  <button id="savePlaylistBtn" class="action-pill" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Playlist</span>
+                  </button>
+
+                  <button id="theaterBarBtn" class="action-pill" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/></svg>
+                    <span>Teater</span>
+                  </button>
+
+                  <button id="shareBtn" class="action-pill" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span>Bagikan</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Description Box -->
+              <div id="descriptionBox" class="description-box">
+                <div id="watchStats" class="watch-stats">125K ditonton • 2 bulan lalu</div>
+                <p id="watchDescription" class="watch-description"></p>
+              </div>
+            </div>
+
+            <!-- Comments Section -->
+            <section id="commentsSection" class="comments-section" aria-label="Komentar">
+              <div class="comments-header">
+                <h2 id="commentsCountHeading">0 Komentar</h2>
+              </div>
+              <form id="commentForm" class="comment-form">
+                <div class="comment-avatar">A</div>
+                <div class="comment-input-group">
+                  <input id="commentInput" class="comment-input" type="text" placeholder="Tulis komentar..." autocomplete="off">
+                  <div class="comment-form-actions">
+                    <button id="commentSubmitBtn" class="btn-pill btn-primary" type="submit">Kirim</button>
+                  </div>
+                </div>
+              </form>
+              <div id="commentsList" class="comments-list"></div>
+            </section>
+          </div>
+
+          <!-- Secondary Related Videos Column -->
+          <aside id="watchSecondary" class="watch-secondary" aria-label="Video Berikutnya">
+            <div class="secondary-header">
+              <h2>Video Berikutnya</h2>
+              <label class="autoplay-toggle">
+                <input id="autoplayCheckbox" type="checkbox" checked>
+                <span>Putar Otomatis</span>
+              </label>
+            </div>
+            <div id="relatedVideosList" class="related-list"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL 1: Add / Play Video (YouTube URL, Direct MP4, or Local File) -->
+  <dialog id="addVideoDialog" class="modal-dialog" closedby="any" aria-labelledby="addVideoTitle">
+    <div class="modal-header">
+      <h2 id="addVideoTitle">Putar Video Tanpa Distraksi</h2>
+      <button class="icon-btn modal-close-btn" type="button" data-close-dialog="addVideoDialog" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs" role="tablist">
+        <button class="modal-tab active" data-tab="urlTab" type="button" role="tab" aria-selected="true">URL YouTube / MP4</button>
+        <button class="modal-tab" data-tab="localTab" type="button" role="tab" aria-selected="false">File Video Lokal</button>
+      </div>
+
+      <form id="addUrlForm" class="modal-panel" data-panel="urlTab">
+        <label class="form-field">
+          <span>Link Video (YouTube URL / ID, atau Link Langsung .mp4 / .webm)</span>
+          <input id="videoUrlInput" type="text" required placeholder="https://www.youtube.com/watch?v=... atau https://.../video.mp4">
+        </label>
+        <label class="form-field">
+          <span>Judul Video (Opsional)</span>
+          <input id="videoTitleInput" type="text" placeholder="Contoh: Tutorial Belajar Web Modern">
+        </label>
+        <label class="form-field">
+          <span>Kategori</span>
+          <select id="videoCategoryInput">
+            <option value="Teknologi">Teknologi</option>
+            <option value="Film & Animasi">Film & Animasi</option>
+            <option value="Musik">Musik</option>
+            <option value="Edukasi">Edukasi</option>
+            <option value="Otomotif">Otomotif</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </label>
+        <p class="form-hint">
+          Link YouTube diputar melalui <code>youtube-nocookie.com</code> (bebas iklan banner/sidebar & bebas pelacakan). Link <code>.mp4</code>/<code>.webm</code> diputar 100% bebas iklan dengan player kustom.
+        </p>
+        <div class="modal-footer">
+          <button class="btn-pill btn-outline" type="button" data-close-dialog="addVideoDialog">Batal</button>
+          <button class="btn-pill btn-primary" type="submit">Putar Sekarang</button>
+        </div>
+      </form>
+
+      <form id="addLocalForm" class="modal-panel" data-panel="localTab" hidden>
+        <div id="dropZone" class="drop-zone">
+          <input id="localFileInput" type="file" accept="video/mp4,video/webm,video/ogg,video/*" hidden>
+          <div class="drop-zone-icon" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <p><strong>Pilih atau seret file video</strong> (.mp4, .webm, .ogg)</p>
+          <p class="form-hint">Video diputar langsung di browser tanpa diunggah ke server — 100% privat & tanpa iklan.</p>
+          <button id="browseLocalBtn" class="btn-pill btn-outline" type="button">Pilih File dari Komputer</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL 2: Settings (Theme, Focus Mode, Ambient Mode, YouTube API Key) -->
+  <dialog id="settingsDialog" class="modal-dialog" closedby="any" aria-labelledby="settingsTitle">
+    <div class="modal-header">
+      <h2 id="settingsTitle">Pengaturan BruTube</h2>
+      <button class="icon-btn modal-close-btn" type="button" data-close-dialog="settingsDialog" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body settings-body">
+      <div class="setting-group">
+        <div class="setting-label">
+          <strong>Tema Tampilan</strong>
+          <span>Mengikuti tema sistem secara otomatis atau pilih secara manual.</span>
+        </div>
+        <div class="theme-segmented" role="radiogroup" aria-label="Pilih Tema">
+          <button type="button" class="theme-opt" data-theme="system" aria-checked="true" role="radio">
+            <span id="systemThemeLabel">Sistem</span>
+          </button>
+          <button type="button" class="theme-opt" data-theme="light" aria-checked="false" role="radio">Terang</button>
+          <button type="button" class="theme-opt" data-theme="dark" aria-checked="false" role="radio">Gelap</button>
+        </div>
+      </div>
+
+      <div class="setting-group setting-row">
+        <div class="setting-label">
+          <strong>Mode Fokus (Anti Distraksi)</strong>
+          <span>Sembunyikan rekomendasi sidebar dan kolom komentar saat menonton.</span>
+        </div>
+        <input id="settingFocusMode" class="toggle-switch" type="checkbox">
+      </div>
+
+      <div class="setting-group setting-row">
+        <div class="setting-label">
+          <strong>Ambient Mode</strong>
+          <span>Efek cahaya lembut di sekitar pemutar video.</span>
+        </div>
+        <input id="settingAmbientMode" class="toggle-switch" type="checkbox" checked>
+      </div>
+
+      <div class="setting-group">
+        <label class="form-field">
+          <span><strong>YouTube Data API v3 Key (Opsional)</strong></span>
+          <input id="ytApiKeyInput" type="password" placeholder="AIzaSy... (opsional untuk cari video YouTube langsung)">
+          <span class="form-hint">Jika diisi, pencarian di kolom atas akan menampilkan hasil langsung dari YouTube dan memutarnya lewat embed privacy-enhanced. Disimpan lokal di browser Anda.</span>
+        </label>
+        <div class="setting-inline-actions">
+          <button id="saveApiKeyBtn" class="btn-pill btn-primary-soft" type="button">Simpan API Key</button>
+          <button id="clearApiKeyBtn" class="btn-pill btn-outline" type="button">Hapus Key</button>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="setting-group setting-row">
+        <div class="setting-label">
+          <strong>Hapus Data Lokal</strong>
+          <span>Bersihkan riwayat tontonan, playlist, dan video tambahan.</span>
+        </div>
+        <button id="resetDataBtn" class="btn-pill btn-danger-soft" type="button">Reset Data</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-pill btn-primary" type="button" data-close-dialog="settingsDialog">Selesai</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL 3: Save to Playlist -->
+  <dialog id="playlistDialog" class="modal-dialog modal-sm" closedby="any" aria-labelledby="playlistDialogTitle">
+    <div class="modal-header">
+      <h2 id="playlistDialogTitle">Simpan ke Playlist</h2>
+      <button class="icon-btn modal-close-btn" type="button" data-close-dialog="playlistDialog" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="playlistCheckboxes" class="playlist-check-list"></div>
+      <form id="createPlaylistForm" class="create-playlist-form">
+        <input id="newPlaylistName" type="text" placeholder="Buat playlist baru..." required maxlength="40">
+        <button class="btn-pill btn-primary" type="submit">Buat</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- MODAL 4: Keyboard Shortcuts -->
+  <dialog id="shortcutsDialog" class="modal-dialog modal-sm" closedby="any" aria-labelledby="shortcutsTitle">
+    <div class="modal-header">
+      <h2 id="shortcutsTitle">Shortcut Keyboard</h2>
+      <button class="icon-btn modal-close-btn" type="button" data-close-dialog="shortcutsDialog" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <ul class="shortcuts-list">
+        <li><span>Putar / Jeda</span><kbd>Spasi</kbd> / <kbd>K</kbd></li>
+        <li><span>Mundur / Maju 10 detik</span><kbd>J</kbd> / <kbd>L</kbd></li>
+        <li><span>Mundur / Maju 5 detik</span><kbd>←</kbd> / <kbd>→</kbd></li>
+        <li><span>Bisukan / Suara</span><kbd>M</kbd></li>
+        <li><span>Mode Teater</span><kbd>T</kbd></li>
+        <li><span>Layar Penuh</span><kbd>F</kbd></li>
+        <li><span>Mode Fokus</span><kbd>C</kbd></li>
+        <li><span>Fokus Pencarian</span><kbd>/</kbd></li>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-pill btn-primary" type="button" data-close-dialog="shortcutsDialog">Tutup</button>
+    </div>
+  </dialog>
+
+  <!-- MODAL 5: Edit Local Account Profile -->
+  <dialog id="profileDialog" class="modal-dialog modal-sm" closedby="any" aria-labelledby="profileDialogTitle">
+    <div class="modal-header">
+      <h2 id="profileDialogTitle">Edit Profil Akun</h2>
+      <button class="icon-btn modal-close-btn" type="button" data-close-dialog="profileDialog" aria-label="Tutup">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="profileForm" class="modal-body">
+      <label class="form-field">
+        <span>Nama Tampilan</span>
+        <input id="profileNameInput" type="text" required maxlength="36" placeholder="Nama Anda">
+      </label>
+      <label class="form-field">
+        <span>Handle (@username)</span>
+        <input id="profileHandleInput" type="text" required maxlength="30" placeholder="@username">
+      </label>
+      <label class="form-field">
+        <span>URL Foto Profil (Opsional)</span>
+        <input id="profileAvatarUrlInput" type="url" placeholder="https://.../avatar.jpg">
+      </label>
+      <div class="modal-footer">
+        <button class="btn-pill btn-outline" type="button" data-close-dialog="profileDialog">Batal</button>
+        <button class="btn-pill btn-primary" type="submit">Simpan Profil</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="catalog.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "brutube",
+  "version": "1.0.0",
+  "description": "BruTube — Neobrutalism YouTube web client ready for Vercel",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node --max-http-header-size=65536 dev-server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "youtube-sr": "^4.3.12",
+    "yt-search": "^2.13.1"
+  }
+}
