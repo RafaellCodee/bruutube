@@ -101,8 +101,17 @@
   // Watch DOM
   const playerContainer = $("playerContainer");
   const html5Video = $("html5Video");
-  const ytIframe = $("ytIframe");
+  const ytPlayerHost = $("ytPlayerHost");
+  const bgAudioOverlay = $("bgAudioOverlay");
+  const bgAudioBtn = $("bgAudioBtn");
   const customControls = $("customControls");
+
+  // YouTube IFrame API & Background Playback state
+  let ytPlayer = null;
+  let ytApiReady = Boolean(window.YT && window.YT.Player);
+  let pendingYouTubeId = null;
+  let isBgAudioMode = false;
+  let wasPlayingBeforeHide = false;
   const playPauseBtn = $("playPauseBtn");
   const skipBackBtn = $("skipBackBtn");
   const skipFwdBtn = $("skipFwdBtn");
@@ -498,8 +507,10 @@
     channelView.hidden = true;
     feedView.hidden = false;
 
-    if (!html5Video.paused) html5Video.pause();
-    ytIframe.src = "";
+    if (!isBgAudioMode) {
+      if (!html5Video.paused) html5Video.pause();
+      stopYouTubePlayer();
+    }
 
     document.querySelectorAll(".nav-item").forEach((item) => {
       item.classList.toggle("active", item.dataset.view === viewName);
@@ -746,20 +757,22 @@
       html5Video.pause();
       html5Video.hidden = true;
       customControls.hidden = true;
-      ytIframe.hidden = false;
-      const originParam = encodeURIComponent(window.location.origin);
-      ytIframe.src = `https://www.youtube.com/embed/${encodeURIComponent(video.youtubeId)}?autoplay=1&rel=0&modestbranding=1&origin=${originParam}`;
-      watchSourceBadge.textContent = "YouTube HD • Bebas Iklan Banner";
+      ytPlayerHost.hidden = false;
+      loadYouTubePlayer(video.youtubeId);
+      watchSourceBadge.textContent = "YouTube HD • Latar Belakang Siap";
     } else {
-      ytIframe.hidden = true;
-      ytIframe.src = "";
+      stopYouTubePlayer();
+      ytPlayerHost.hidden = true;
       html5Video.hidden = false;
       customControls.hidden = false;
       html5Video.src = video.src;
       html5Video.playbackRate = Number(speedSelect.value) || 1;
       html5Video.play().catch(() => {});
-      watchSourceBadge.textContent = video.type === "local" ? "Video Lokal • 100% Bebas Iklan" : "HD Stream • 100% Bebas Iklan";
+      watchSourceBadge.textContent = video.type === "local" ? "Video Lokal • Latar Belakang Siap" : "HD Stream • Latar Belakang Siap";
     }
+
+    syncMediaSessionMetadata(video);
+    syncBgAudioOverlay(video);
 
     const avatarUrl = video.channelAvatar || state.channelAvatars[video.channel] || "";
     watchTitle.textContent = video.title;
@@ -1443,8 +1456,10 @@
     watchView.hidden = true;
     channelView.hidden = false;
 
-    if (!html5Video.paused) html5Video.pause();
-    ytIframe.src = "";
+    if (!isBgAudioMode) {
+      if (!html5Video.paused) html5Video.pause();
+      stopYouTubePlayer();
+    }
 
     const cachedAvatar = state.channelAvatars[channelName] || "";
     $("channelProfileName").textContent = channelName;
@@ -1638,9 +1653,224 @@
   }
 
   // =========================================================================
-  // Initialize — Immediately Load Live YouTube Home Feed!
+  // Background Playback, YouTube IFrame API & Media Session Lock-Screen API
   // =========================================================================
+  function playNextVideo() {
+    if (!currentVideo) return;
+    const pool = liveRelatedVideos.length ? liveRelatedVideos : liveFeedVideos;
+    const next = pool.find((v) => v.id !== currentVideo.id);
+    if (next) openWatchView(next.id);
+  }
+
+  function playPrevVideo() {
+    if (state.history.length > 1) {
+      openWatchView(state.history[1]);
+    }
+  }
+
+  function isCurrentMediaPlaying() {
+    if (!currentVideo) return false;
+    if (currentVideo.type === "youtube" && ytPlayer && typeof ytPlayer.getPlayerState === "function") {
+      return ytPlayer.getPlayerState() === 1;
+    }
+    return !html5Video.hidden && !html5Video.paused;
+  }
+
+  function playCurrentMedia() {
+    if (!currentVideo) return;
+    if (currentVideo.type === "youtube" && ytPlayer && typeof ytPlayer.playVideo === "function") {
+      ytPlayer.playVideo();
+    } else if (!html5Video.hidden) {
+      html5Video.play().catch(() => {});
+    }
+  }
+
+  function pauseCurrentMedia() {
+    if (!currentVideo) return;
+    if (currentVideo.type === "youtube" && ytPlayer && typeof ytPlayer.pauseVideo === "function") {
+      ytPlayer.pauseVideo();
+    } else if (!html5Video.hidden) {
+      html5Video.pause();
+    }
+  }
+
+  function seekCurrentMediaBy(deltaSec) {
+    if (!currentVideo) return;
+    if (currentVideo.type === "youtube" && ytPlayer && typeof ytPlayer.getCurrentTime === "function") {
+      const target = Math.max(0, ytPlayer.getCurrentTime() + deltaSec);
+      ytPlayer.seekTo(target, true);
+    } else if (!html5Video.hidden) {
+      html5Video.currentTime = Math.max(0, Math.min(html5Video.duration || 0, html5Video.currentTime + deltaSec));
+    }
+  }
+
+  function stopYouTubePlayer() {
+    pendingYouTubeId = null;
+    if (ytPlayer && typeof ytPlayer.stopVideo === "function") {
+      try { ytPlayer.stopVideo(); } catch {}
+    } else {
+      ytPlayerHost.innerHTML = "";
+    }
+  }
+
+  function ensureIframeReferrerPolicy() {
+    const iframe = ytPlayerHost.querySelector("iframe");
+    if (iframe) {
+      iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+      iframe.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share");
+    }
+  }
+
+  function loadYouTubePlayer(videoId) {
+    if (!videoId) return;
+    if (ytApiReady && window.YT && window.YT.Player) {
+      if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
+        ytPlayer.loadVideoById(videoId);
+        ensureIframeReferrerPolicy();
+        return;
+      }
+      ytPlayerHost.innerHTML = `<div id="ytPlayerMount"></div>`;
+      ytPlayer = new window.YT.Player("ytPlayerMount", {
+        videoId,
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          autoplay: 1,
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          enablejsapi: 1,
+          origin: window.location.origin
+        },
+        events: {
+          onReady: (ev) => {
+            ensureIframeReferrerPolicy();
+            try { ev.target.playVideo(); } catch {}
+          },
+          onStateChange: (ev) => {
+            if (!("mediaSession" in navigator)) return;
+            if (ev.data === 1) {
+              navigator.mediaSession.playbackState = "playing";
+            } else if (ev.data === 2) {
+              navigator.mediaSession.playbackState = "paused";
+            } else if (ev.data === 0 && state.settings.autoplay) {
+              playNextVideo();
+            }
+          }
+        }
+      });
+      ensureIframeReferrerPolicy();
+    } else {
+      pendingYouTubeId = videoId;
+      const originParam = encodeURIComponent(window.location.origin);
+      ytPlayerHost.innerHTML = `<iframe class="video-iframe" title="Pemutar Video YouTube" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen src="https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${originParam}"></iframe>`;
+    }
+  }
+
+  window.onYouTubeIframeAPIReady = () => {
+    ytApiReady = true;
+    if (pendingYouTubeId && currentVideo && currentVideo.youtubeId === pendingYouTubeId) {
+      const id = pendingYouTubeId;
+      pendingYouTubeId = null;
+      loadYouTubePlayer(id);
+    }
+  };
+
+  function syncMediaSessionMetadata(video) {
+    if (!("mediaSession" in navigator) || !video) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: video.title || "BruTube",
+        artist: video.channel || "BruTube",
+        album: "BruTube",
+        artwork: video.thumb ? [{ src: video.thumb, sizes: "480x360", type: "image/jpeg" }] : []
+      });
+      navigator.mediaSession.playbackState = "playing";
+    } catch {
+      // Ignore unsupported MediaMetadata errors
+    }
+  }
+
+  function setupMediaSessionHandlers() {
+    if (!("mediaSession" in navigator)) return;
+    const safeHandler = (action, fn) => {
+      try { navigator.mediaSession.setActionHandler(action, fn); } catch {}
+    };
+    safeHandler("play", () => playCurrentMedia());
+    safeHandler("pause", () => pauseCurrentMedia());
+    safeHandler("previoustrack", () => playPrevVideo());
+    safeHandler("nexttrack", () => playNextVideo());
+    safeHandler("seekbackward", (d) => seekCurrentMediaBy(-(d?.seekOffset || 10)));
+    safeHandler("seekforward", (d) => seekCurrentMediaBy(d?.seekOffset || 10));
+    safeHandler("seekto", (d) => {
+      if (typeof d?.seekTime !== "number") return;
+      if (currentVideo?.type === "youtube" && ytPlayer && typeof ytPlayer.seekTo === "function") {
+        ytPlayer.seekTo(d.seekTime, true);
+      } else if (!html5Video.hidden) {
+        html5Video.currentTime = d.seekTime;
+      }
+    });
+
+    html5Video.addEventListener("play", () => {
+      navigator.mediaSession.playbackState = "playing";
+    });
+    html5Video.addEventListener("pause", () => {
+      navigator.mediaSession.playbackState = "paused";
+    });
+  }
+
+  function syncBgAudioOverlay(video) {
+    if (!video) return;
+    const fallback = window.makeFallbackThumb(video.title);
+    $("bgAudioThumb").src = video.thumb || fallback;
+    $("bgAudioTitle").textContent = video.title || "Memutar...";
+    $("bgAudioChannel").textContent = video.channel || "BruTube";
+  }
+
+  function toggleBgAudioMode(forceState) {
+    isBgAudioMode = typeof forceState === "boolean" ? forceState : !isBgAudioMode;
+    bgAudioOverlay.hidden = !isBgAudioMode;
+    bgAudioBtn.setAttribute("aria-pressed", String(isBgAudioMode));
+    bgAudioBtn.classList.toggle("active", isBgAudioMode);
+    if (currentVideo) syncBgAudioOverlay(currentVideo);
+    showToast(
+      isBgAudioMode
+        ? "Mode Latar Belakang aktif — kontrol layar kunci & audio siap"
+        : "Kembali ke tampilan video"
+    );
+  }
+
+  function bindBackgroundPlaybackEvents() {
+    bgAudioBtn.addEventListener("click", () => toggleBgAudioMode());
+    $("bgExitBtn").addEventListener("click", () => toggleBgAudioMode(false));
+    $("bgPlayPauseBtn").addEventListener("click", () => {
+      if (isCurrentMediaPlaying()) pauseCurrentMedia();
+      else playCurrentMedia();
+    });
+    $("bgNextBtn").addEventListener("click", playNextVideo);
+    $("bgPrevBtn").addEventListener("click", playPrevVideo);
+
+    // Keep playback resilient when user switches tabs, minimizes browser, or locks screen
+    document.addEventListener("visibilitychange", () => {
+      if (!currentVideo) return;
+      if (document.hidden) {
+        wasPlayingBeforeHide = isCurrentMediaPlaying();
+        if (wasPlayingBeforeHide) {
+          syncMediaSessionMetadata(currentVideo);
+          // Gently keep playback running if browser tries to pause on visibility change
+          setTimeout(() => {
+            if (document.hidden && wasPlayingBeforeHide && !isCurrentMediaPlaying()) {
+              playCurrentMedia();
+            }
+          }, 250);
+        }
+      }
+    });
+  }
+
+  // Initialize
   setupDialogFallbacks();
+  setupMediaSessionHandlers();
   syncThemeUI();
   applyVisualSettings();
   renderAccountProfile();
@@ -1648,5 +1878,6 @@
   updateSidebarBadges();
   bindEvents();
   bindProfileAndChannelEvents();
+  bindBackgroundPlaybackEvents();
   fetchLiveFeed(activeCategory);
 })();
